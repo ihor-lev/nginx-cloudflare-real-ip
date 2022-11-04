@@ -6,28 +6,23 @@ To provide the client (visitor) IP address for every request to the origin, Clou
 ## Nginx Configuration
 With a small configuration modification we can integrate replacing the real ip address of the visitor instead of getting CloudFlare's load balancers' ip addresses.
 
-Open "/etc/nginx/nginx.conf" file with your favorite text editor and just add the following lines to your nginx.conf inside http{....} block.
-
-```nginx
-include /etc/nginx/cloudflare;
-```
-
 The bash script may run manually or can be scheduled to refresh the ip list of CloudFlare automatically.
+
 ```sh
 #!/bin/bash
 
-CLOUDFLARE_FILE_PATH=/etc/nginx/cloudflare
+CLOUDFLARE_FILE_PATH=/etc/nginx/conf.d/00_cloudflare.conf
 
-echo "#Cloudflare" > $CLOUDFLARE_FILE_PATH;
+echo "# Cloudflare - set real ip addresses" > $CLOUDFLARE_FILE_PATH;
 echo "" >> $CLOUDFLARE_FILE_PATH;
 
-echo "# - IPv4" >> $CLOUDFLARE_FILE_PATH;
+echo "# IPv4" >> $CLOUDFLARE_FILE_PATH;
 for i in `curl -s -L https://www.cloudflare.com/ips-v4`; do
     echo "set_real_ip_from $i;" >> $CLOUDFLARE_FILE_PATH;
 done
 
 echo "" >> $CLOUDFLARE_FILE_PATH;
-echo "# - IPv6" >> $CLOUDFLARE_FILE_PATH;
+echo "# IPv6" >> $CLOUDFLARE_FILE_PATH;
 for i in `curl -s -L https://www.cloudflare.com/ips-v6`; do
     echo "set_real_ip_from $i;" >> $CLOUDFLARE_FILE_PATH;
 done
@@ -35,17 +30,18 @@ done
 echo "" >> $CLOUDFLARE_FILE_PATH;
 echo "real_ip_header CF-Connecting-IP;" >> $CLOUDFLARE_FILE_PATH;
 
-#test configuration and reload nginx
+# test configuration and reload nginx
 nginx -t && systemctl reload nginx
 ```
 
 ## Output
-Your "/etc/nginx/cloudflare" file may look like as below;
+
+Your `/etc/nginx/conf.d/00_cloudflare.conf` file may look like as below.
 
 ```nginx
-#Cloudflare ip addresses
+# Cloudflare - set real ip addresses
 
-# - IPv4
+# IPv4
 set_real_ip_from 173.245.48.0/20;
 set_real_ip_from 103.21.244.0/22;
 set_real_ip_from 103.22.200.0/22;
@@ -62,7 +58,7 @@ set_real_ip_from 104.24.0.0/14;
 set_real_ip_from 172.64.0.0/13;
 set_real_ip_from 131.0.72.0/22;
 
-# - IPv6
+# IPv6
 set_real_ip_from 2400:cb00::/32;
 set_real_ip_from 2606:4700::/32;
 set_real_ip_from 2803:f800::/32;
@@ -76,11 +72,14 @@ real_ip_header CF-Connecting-IP;
 ```
 
 ## Crontab
-Change the location of "/opt/scripts/cloudflare-ip-whitelist-sync.sh" anywhere you want. 
+
 CloudFlare ip addresses are automatically refreshed every day, and nginx will be realoded when synchronization is completed.
+
+`sudo crontab -e`
+
 ```sh
-# Auto sync ip addresses of Cloudflare and reload nginx
-30 2 * * * /opt/scripts/cloudflare-ip-whitelist-sync.sh >/dev/null 2>&1
+# Auto sync Cloudflare ip addresses and reload nginx
+30 2 * * * ~/bin/nginx_cloudflare_sync.sh >/dev/null 2>&1
 ```
 
 ### License
