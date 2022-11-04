@@ -1,0 +1,2 @@
+# Auto sync Cloudflare ip addresses and reload nginx
+30 2 * * * ~/bin/nginx_cloudflare_sync.sh >/dev/null 2>&1
